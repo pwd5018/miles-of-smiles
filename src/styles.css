@@ -5,7 +5,7 @@
 body { margin:0; background:#d9e5df; color:var(--ink); font-family:'DM Sans',sans-serif; }
 button { font:inherit; color:inherit; }
 button:focus-visible { outline:3px solid #203233; outline-offset:3px; }
-.app-shell { min-height:100vh; max-width:760px; margin:auto; background:var(--cream); overflow:hidden; position:relative; box-shadow:0 0 40px #20323322; }
+.app-shell { min-height:100vh; max-width:760px; margin:auto; padding-bottom:calc(70px + env(safe-area-inset-bottom)); background:var(--cream); overflow:hidden; position:relative; box-shadow:0 0 40px #20323322; }
 .topbar { height:78px; padding:15px 22px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #20323318; background:#f8f4e8eF; backdrop-filter:blur(10px); position:relative; z-index:5; }
 .brand { border:0; background:none; display:flex; gap:10px; align-items:center; padding:0; text-align:left; cursor:pointer; }
 .brand-mark { width:42px; height:42px; border-radius:50% 50% 45% 55%; background:var(--coral); color:white; display:grid; place-items:center; transform:rotate(-4deg); }
