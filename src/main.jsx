@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  ArrowLeft, Bookmark, Check, ChevronRight, Clock3, Compass, Heart,
+  ArrowLeft, Bookmark, Check, ChevronRight, CircleDot, Clock3, Compass, Heart,
   Home, Pause, Play, RotateCcw, Search, Settings2, Sparkles, Star, Trophy,
   Users, Volume2, VolumeX, X, Zap
 } from 'lucide-react';
@@ -9,7 +9,7 @@ import { activities, filters } from './activities';
 import './styles.css';
 
 const DEFAULT_PLAYERS = ['Passenger 1', 'Passenger 2'];
-const emptyRound = () => ({ checked: [], choices: {}, step: 0, started: false, count: 0, ended: false });
+const emptyRound = () => ({ checked: [], choices: {}, step: 0, started: false, count: 0, ended: false, target: 4, flipped: [], matched: [], board: Array(9).fill(''), phase: 'ready', winner: null, draw: false });
 
 function readStored(key, fallback) {
   if (typeof window === 'undefined') return fallback;
@@ -247,8 +247,14 @@ function PlayScreen({ activity, players, activePlayer, setActivePlayer, round, s
     ? round.checked.length === activity.items.length
     : activity.gameType === 'vote'
       ? Object.keys(round.choices).length === players.length
-      : activity.gameType === 'rapid'
+      : activity.gameType === 'rapid' || activity.gameType === 'tap'
         ? round.count >= activity.goal
+        : activity.gameType === 'memory'
+          ? round.matched.length === 8
+          : activity.gameType === 'reaction'
+            ? round.phase === 'success'
+            : activity.gameType === 'ticTacToe'
+              ? Boolean(round.winner || round.draw)
         : activity.gameType === 'timer'
           ? round.started
           : round.step >= activity.turns);
@@ -291,7 +297,71 @@ function RoundWidget({ activity, players, activePlayer, setActivePlayer, round, 
 
   if (activity.gameType === 'rapid') return <div className="round-widget rapid-widget"><div className="rapid-score"><b>{round.count}</b><span>of {activity.goal}</span></div><p>Category: <strong>{activity.category}</strong></p><button className="count-button" disabled={round.count >= activity.goal} onClick={() => { updateRound({ count: round.count + 1 }); feedback('tap'); }}><Zap size={22} /> Got one!</button><small>Tap once for every valid answer</small></div>;
 
+  if (activity.gameType === 'tap') return <TapTargetGame activity={activity} round={round} updateRound={updateRound} feedback={feedback} />;
+  if (activity.gameType === 'memory') return <MemoryMatchGame round={round} updateRound={updateRound} feedback={feedback} />;
+  if (activity.gameType === 'reaction') return <ReactionGame round={round} updateRound={updateRound} feedback={feedback} />;
+  if (activity.gameType === 'ticTacToe') return <TicTacToeGame players={players} activePlayer={activePlayer} setActivePlayer={setActivePlayer} round={round} updateRound={updateRound} feedback={feedback} />;
+
   return <div className="round-widget sequence-widget"><div className="progress-label"><b>{Math.min(round.step, activity.turns)}/{activity.turns} turns</b><span>Pass the phone</span></div><div className="turn-label"><span className="player-dot">{activePlayer + 1}</span><b>{players[activePlayer]}, you’re up!</b></div><p>{activity.turnLabel}</p><button className="sequence-action" disabled={round.step >= activity.turns} onClick={handleSequence}><Check size={20} /> Done — pass it on</button></div>;
+}
+
+function TapTargetGame({ activity, round, updateRound, feedback }) {
+  return <div className="round-widget tap-game"><div className="progress-label"><b>{round.count}/{activity.goal} targets</b><span>Hit the glowing dot</span></div><div className="target-board">{Array.from({ length: 9 }, (_, index) => <button key={index} aria-label={index === round.target ? 'Glowing target' : 'Empty target'} className={index === round.target ? 'target active' : 'target'} onClick={() => { if (index !== round.target || round.count >= activity.goal) { feedback('tap'); return; } updateRound({ count: round.count + 1, target: (round.target * 7 + 3) % 9 }); feedback(round.count + 1 >= activity.goal ? 'success' : 'tap'); }}>{index === round.target && <CircleDot size={25} />}</button>)}</div><small>Tap quickly — every hit moves it!</small></div>;
+}
+
+function MemoryMatchGame({ round, updateRound, feedback }) {
+  const symbols = ['🚗', '🌲', '🎵', '🍿'];
+  const cards = useMemo(() => [...symbols, ...symbols].sort(() => Math.random() - 0.5), []);
+  const mismatchTimer = useRef(null);
+  useEffect(() => () => clearTimeout(mismatchTimer.current), []);
+  const flip = index => {
+    if (round.flipped.includes(index) || round.matched.includes(index) || round.flipped.length === 2) return;
+    const flipped = [...round.flipped, index];
+    updateRound({ flipped });
+    feedback('tap');
+    if (flipped.length !== 2) return;
+    const [first, second] = flipped;
+    if (cards[first] === cards[second]) {
+      updateRound({ flipped: [], matched: [...round.matched, first, second] });
+      feedback(round.matched.length + 2 === cards.length ? 'success' : 'tap');
+    } else {
+      clearTimeout(mismatchTimer.current);
+      mismatchTimer.current = setTimeout(() => updateRound({ flipped: [] }), 650);
+    }
+  };
+  return <div className="round-widget memory-game"><div className="progress-label"><b>{round.matched.length / 2}/4 pairs</b><span>Find the matches</span></div><div className="memory-grid">{cards.map((symbol, index) => { const visible = round.flipped.includes(index) || round.matched.includes(index); return <button key={index} aria-label={visible ? `Card ${symbol}` : 'Hidden card'} className={visible ? 'memory-card visible' : 'memory-card'} onClick={() => flip(index)}>{visible ? symbol : '?'}</button>; })}</div><small>Match all four pairs. The car is your game table!</small></div>;
+}
+
+function ReactionGame({ round, updateRound, feedback }) {
+  useEffect(() => {
+    if (round.phase !== 'waiting') return undefined;
+    const timer = setTimeout(() => { updateRound({ phase: 'go' }); feedback('success'); }, 1200 + Math.random() * 1800);
+    return () => clearTimeout(timer);
+  }, [round.phase, updateRound, feedback]);
+  const start = () => { updateRound({ phase: 'waiting' }); feedback('tap'); };
+  const tap = () => {
+    if (round.phase === 'go') { updateRound({ phase: 'success' }); feedback('success'); }
+    if (round.phase === 'waiting') { updateRound({ phase: 'tooSoon' }); feedback('tap'); }
+  };
+  const state = { ready: ['Ready?', 'Wait for GO'], waiting: ['Wait…', 'Don’t tap yet!'], go: ['GO!', 'Tap now!'], tooSoon: ['Too soon!', 'Start again'], success: ['Nice!', 'You got it'] }[round.phase];
+  return <div className={`round-widget reaction-game ${round.phase}`}><button className="reaction-button" onClick={round.phase === 'ready' || round.phase === 'tooSoon' || round.phase === 'success' ? start : tap}><span>{state[0]}</span><small>{state[1]}</small></button>{round.phase === 'tooSoon' && <p className="game-warning">False start! Wait for the signal.</p>}</div>;
+}
+
+function TicTacToeGame({ players, activePlayer, setActivePlayer, round, updateRound, feedback }) {
+  const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+  const board = round.board || Array(9).fill('');
+  const turnIndex = activePlayer % 2;
+  const mark = turnIndex === 0 ? 'X' : 'O';
+  const play = index => {
+    if (board[index] || round.winner || round.draw) return;
+    const nextBoard = board.map((value, position) => position === index ? mark : value);
+    const winner = lines.find(([a, b, c]) => nextBoard[a] && nextBoard[a] === nextBoard[b] && nextBoard[a] === nextBoard[c]);
+    updateRound({ board: nextBoard, winner: winner ? mark : null, draw: !winner && nextBoard.every(Boolean) });
+    feedback(winner || nextBoard.every(Boolean) ? 'success' : 'tap');
+    if (!winner && !nextBoard.every(Boolean)) setActivePlayer(value => (value + 1) % 2);
+  };
+  const status = round.winner ? `${players[round.winner === 'X' ? 0 : 1]} wins!` : round.draw ? 'It’s a draw!' : `${players[turnIndex]}, your turn`;
+  return <div className="round-widget tic-tac-toe"><div className="progress-label"><b>{status}</b><span>X vs O</span></div><div className="tic-board">{board.map((value, index) => <button key={index} className={value ? `mark-${value.toLowerCase()}` : ''} onClick={() => play(index)} aria-label={value ? `Square ${value}` : `Empty square ${index + 1}`}>{value}</button>)}</div><small>Pass the phone after every move.</small></div>;
 }
 
 function BrowseScreen({ screen, favorites, pool, openActivity, setFilter, setScreen }) {
@@ -310,7 +380,7 @@ function MiniCard({ activity, number, onClick }) {
 }
 
 function labelFor(gameType) {
-  return { scavenger: 'Tap & find', vote: 'Pass & vote', timer: 'Beat the clock', rapid: 'Quick fire', sequence: 'Pass & play' }[gameType] || 'Play';
+  return { scavenger: 'Tap & find', vote: 'Pass & vote', timer: 'Beat the clock', rapid: 'Quick fire', tap: 'Tap challenge', memory: 'Match pairs', reaction: 'Reaction test', ticTacToe: 'Two-player board', sequence: 'Pass & play' }[gameType] || 'Play';
 }
 
 function formatTime(seconds) {

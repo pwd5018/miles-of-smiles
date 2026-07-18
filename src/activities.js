@@ -1,7 +1,7 @@
 import {
-  Brain, CheckSquare, Compass, Crown, Dice5, Drama, Flag, Gamepad2,
-  Heart, Lightbulb, Music2, Search, Sparkles, Star, Timer, Trophy, Users,
-  Volume2, Zap
+  Brain, CheckSquare, CircleDot, Compass, Crown, Dice5, Drama, Flag, Gamepad2,
+  Grid3X3, Heart, Lightbulb, MousePointer2, Music2, Search, Sparkles, Star,
+  Timer, Trophy, Users, Volume2, Zap
 } from 'lucide-react';
 
 export const activities = [
@@ -104,6 +104,26 @@ export const activities = [
     id: 'beat-the-clock', type: 'Challenge', icon: Timer, title: 'Beat the Clock',
     prompt: 'How many different car colors can you spot before time runs out?', meta: '1 min', ages: 'All ages', energy: 'focused', color: 'blue', gameType: 'timer',
     seconds: 45, bonus: 'No counting the same color twice.'
+  },
+  {
+    id: 'tap-the-target', type: 'Mini game', icon: MousePointer2, title: 'Tap the Target',
+    prompt: 'Hit the glowing target as it jumps around the board. How fast can you get ten?', meta: '1–2 min', ages: 'All ages', energy: 'loud', color: 'coral', gameType: 'tap',
+    goal: 10, bonus: 'Try again and beat your family record.'
+  },
+  {
+    id: 'memory-match', type: 'Mini game', icon: Brain, title: 'Memory Match',
+    prompt: 'Flip cards and find all four matching pairs. Fewer moves wins.', meta: '2–5 min', ages: '6+', energy: 'focused', color: 'yellow', gameType: 'memory',
+    bonus: 'Call out the matching objects when you find them.'
+  },
+  {
+    id: 'reaction-rush', type: 'Mini game', icon: CircleDot, title: 'Reaction Rush',
+    prompt: 'Wait for the screen to say GO, then tap as quickly as you can. Do not jump the start!', meta: '1 min', ages: '6+', energy: 'focused', color: 'mint', gameType: 'reaction',
+    bonus: 'Winner gets to choose the next game.'
+  },
+  {
+    id: 'road-trip-tic-tac-toe', type: 'Mini game', icon: Grid3X3, title: 'Road Trip Tic-Tac-Toe',
+    prompt: 'Pass the phone between passengers and get three in a row. The driver is the referee.', meta: '2–5 min', ages: '6+', energy: 'chatty', color: 'blue', gameType: 'ticTacToe',
+    bonus: 'Winner starts the next round with the first snack pick.'
   },
 ];
 
