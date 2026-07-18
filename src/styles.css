@@ -82,3 +82,67 @@ h1 { font-size:clamp(58px,15vw,92px); line-height:.82; letter-spacing:-.05em; ma
 .reaction-game { padding:5px 0 0; }.reaction-button { width:min(100%,270px); aspect-ratio:1; margin:auto; border:0; border-radius:50%; background:var(--ink); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 8px 0 #0002; }.reaction-button span { font:42px 'Fraunces'; }.reaction-button small { font-size:11px; opacity:.7; }.reaction-game.waiting .reaction-button { background:var(--yellow); color:var(--ink); }.reaction-game.go .reaction-button { background:#44a866; color:white; transform:scale(1.04); }.reaction-game.tooSoon .reaction-button { background:var(--coral); }.reaction-game.success .reaction-button { background:var(--blue); }.game-warning { color:#a13f36; font-size:11px; font-weight:700; margin:12px 0 0; }
 .tic-board { width:min(100%,260px); aspect-ratio:1; margin:4px auto 0; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }.tic-board button { border:1px solid #20323325; border-radius:12px; background:#fff8; color:var(--ink); font:42px 'Fraunces'; cursor:pointer; }.tic-board button.mark-x { color:var(--coral); }.tic-board button.mark-o { color:var(--blue); }.tic-board button:active { transform:scale(.94); }
 @media(max-width:580px){.home-tools{grid-template-columns:1fr;padding-left:16px;padding-right:16px}.timer-widget{grid-template-columns:1fr}.timer-face{width:104px;height:104px}.timer-action{width:100%}.top-actions{gap:4px}.sound-btn{width:38px;height:38px}.setup-icon{margin-bottom:14px}}
+
+/* Smiley Merge Game */
+.smiley-merge-widget { text-align: center; }
+.merge-game-container { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+.next-preview { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+.next-emoji-badge { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #203233; display:grid; place-items: center; font-size: 18px; box-shadow: 0 3px 0 #0002; }
+.merge-board { position: relative; border: 3px solid #203233; border-radius: 12px; background: #fffdf6; overflow: hidden; touch-action: none; cursor: crosshair; box-shadow: inset 0 4px 10px rgba(0,0,0,0.05); }
+.dropper { position: absolute; top: 12px; transform: translateX(-50%); pointer-events: none; border-radius: 50%; border: 1.5px solid #203233; display: grid; place-items: center; z-index: 3; box-shadow: 0 4px 6px rgba(0,0,0,0.15); transition: background-color 0.2s; }
+.dropper-guide { position: absolute; top: 55px; border-left: 2px dashed rgba(32,50,51,0.15); transform: translateX(-50%); pointer-events: none; width: 0; z-index: 1; }
+.merge-canvas { display: block; position: relative; z-index: 2; pointer-events: none; }
+.merge-overlay { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; }
+.merge-overlay.gameover { background: rgba(235, 109, 84, 0.9); color: white; }
+.merge-overlay.win { background: rgba(233, 189, 71, 0.95); color: #203233; }
+.merge-overlay h3 { font: 32px 'Fraunces'; margin: 0 0 10px; }
+.merge-overlay p { margin: 0 0 20px; font-size: 14px; font-weight: 500; opacity: 0.9; }
+
+/* Pack the Trunk Game */
+.pack-trunk-widget { text-align: center; }
+.trunk-game-area { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 10px; }
+.trunk-grid { position: relative; border: 3px solid #203233; border-radius: 12px; background: rgba(32, 50, 51, 0.05); overflow: hidden; box-shadow: inset 0 4px 10px rgba(0,0,0,0.05); display: grid; }
+.grid-cell { border-right: 1px dashed rgba(32, 50, 51, 0.1); border-bottom: 1px dashed rgba(32, 50, 51, 0.1); }
+.grid-cell:nth-child(4n) { border-right: 0; }
+.trunk-item { position: absolute; border-radius: 10px; border: 2.5px solid #203233; cursor: grab; touch-action: none; box-shadow: 0 4px 0 #203233; transition: transform 0.1s, box-shadow 0.1s; }
+.trunk-item.placed { transition: left 0.15s, top 0.15s, width 0.15s, height 0.15s; }
+.trunk-item.shelf { position: relative; display: inline-block; box-sizing: border-box; }
+.trunk-item.dragging { cursor: grabbing; box-shadow: 0 8px 16px rgba(0,0,0,0.25); transform: scale(1.02); opacity: 0.9; }
+.item-inner { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 4px; pointer-events: none; }
+.item-icon { opacity: 0.8; }
+.item-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%; }
+.rotate-btn { position: absolute; right: 4px; bottom: 4px; width: 22px; height: 22px; border: 1.5px solid #203233; border-radius: 50%; background: white; display: grid; place-items: center; cursor: pointer; box-shadow: 0 1.5px 0 #203233; z-index: 4; }
+.rotate-btn:active { transform: translateY(1.5px); box-shadow: none; }
+.trunk-shelf { width: 100%; background: white; border: 1.5px solid rgba(32, 50, 51, 0.12); border-radius: 14px; padding: 15px; text-align: center; }
+.shelf-hint { font-size: 11px; font-weight: 600; opacity: 0.5; margin: 0 0 12px; }
+.shelf-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; min-height: 80px; align-items: center; }
+.trunk-overlay, .traffic-overlay { position: absolute; inset: 0; z-index: 10; background: rgba(248, 244, 232, 0.95); display: grid; place-items: center; border-radius: 12px; backdrop-filter: blur(4px); }
+.overlay-content { text-align: center; padding: 30px 20px; max-width: 280px; }
+.win-trophy { color: var(--yellow); filter: drop-shadow(0 4px 0 rgba(32,50,51,0.1)); margin-bottom: 12px; animation: trophy-bounce 1s infinite alternate; }
+.overlay-content h3 { font: 32px 'Fraunces'; margin: 0 0 8px; }
+.overlay-content p { font-size: 13px; opacity: 0.7; margin: 0 0 20px; line-height: 1.45; }
+@keyframes trophy-bounce { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+
+/* Traffic Jam Game */
+.traffic-jam-widget { text-align: center; }
+.traffic-board-wrapper { position: relative; margin: 15px auto 10px; width: fit-content; }
+.traffic-exit-arrow { position: absolute; right: -28px; top: 100px; transform: translateY(-50%); color: var(--coral); animation: arrow-pulse 0.8s infinite alternate; background: white; width: 28px; height: 28px; border: 2px solid #203233; border-radius: 50%; display: grid; place-items: center; z-index: 4; box-shadow: 0 3px 0 #203233; }
+@keyframes arrow-pulse { from { transform: translate(-2px, -50%); } to { transform: translate(4px, -50%); } }
+.traffic-grid { position: relative; border: 3px solid #203233; border-radius: 12px; background: rgba(32, 50, 51, 0.04); overflow: hidden; box-shadow: inset 0 4px 10px rgba(0,0,0,0.06); display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(6, 1fr); }
+.traffic-cell { border-right: 1px dashed rgba(32, 50, 51, 0.08); border-bottom: 1px dashed rgba(32, 50, 51, 0.08); }
+.traffic-cell:nth-child(6n) { border-right: 0; }
+.traffic-cell.exit-row { background: rgba(235, 109, 84, 0.03); }
+.traffic-vehicle { position: absolute; border: 2px solid #203233; border-radius: 10px; cursor: grab; touch-action: none; box-shadow: 0 3px 0 #203233; display: flex; flex-direction: column; justify-content: center; }
+.traffic-vehicle:active { cursor: grabbing; }
+.traffic-vehicle.target-car { background: var(--coral); box-shadow: 0 3px 0 #a13f36; z-index: 3; }
+.vehicle-body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 100%; pointer-events: none; }
+.car-icon { opacity: 0.7; }
+.vehicle-tag { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.traffic-actions { margin-top: 10px; display: flex; justify-content: center; }
+
+/* Global helper adjustments */
+@media (max-width: 580px) {
+  .trunk-grid { transform: scale(0.9); transform-origin: top center; margin-bottom: -15px; }
+  .trunk-shelf { width: 95%; margin: 0 auto; }
+  .traffic-board-wrapper { transform: scale(0.92); transform-origin: top center; margin-bottom: -10px; }
+}

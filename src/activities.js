@@ -1,7 +1,7 @@
 import {
   Brain, CheckSquare, CircleDot, Compass, Crown, Dice5, Drama, Flag, Gamepad2,
   Grid3X3, Heart, Lightbulb, MousePointer2, Music2, Search, Sparkles, Star,
-  Timer, Trophy, Users, Volume2, Zap
+  Timer, Trophy, Users, Volume2, Zap, Smile, Luggage, Car
 } from 'lucide-react';
 
 export const activities = [
@@ -124,6 +124,21 @@ export const activities = [
     id: 'road-trip-tic-tac-toe', type: 'Mini game', icon: Grid3X3, title: 'Road Trip Tic-Tac-Toe',
     prompt: 'Pass the phone between passengers and get three in a row. The driver is the referee.', meta: '2–5 min', ages: '6+', energy: 'chatty', color: 'blue', gameType: 'ticTacToe',
     bonus: 'Winner starts the next round with the first snack pick.'
+  },
+  {
+    id: 'smiley-merge', type: 'Mini game', icon: Smile, title: 'Smiley Merge',
+    prompt: 'Drop and merge matching smiles to build the ultimate Giga Smile! Do not overflow the container.', meta: '3–10 min', ages: 'All ages', energy: 'focused', color: 'orange', gameType: 'smileyMerge',
+    bonus: 'Get a score of 1000 points or merge up to Giga Smile.'
+  },
+  {
+    id: 'pack-trunk', type: 'Mini game', icon: Luggage, title: 'Pack the Trunk',
+    prompt: 'Drag and rotate suitcases, coolers, and gear to fit everything perfectly into the trunk!', meta: '3–8 min', ages: '6+', energy: 'focused', color: 'blue', gameType: 'packTrunk',
+    bonus: 'Fit everything with zero empty spots left in the trunk.'
+  },
+  {
+    id: 'traffic-jam-game', type: 'Mini game', icon: Car, title: 'Traffic Jam',
+    prompt: 'Slide the blocking cars and trucks out of the way to get your red family car to the exit!', meta: '2–5 min', ages: '6+', energy: 'focused', color: 'mint', gameType: 'trafficJam',
+    bonus: 'Solve the puzzle in fewer than 15 moves.'
   },
 ];
 

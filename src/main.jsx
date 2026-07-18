@@ -3,9 +3,12 @@ import { createRoot } from 'react-dom/client';
 import {
   ArrowLeft, Bookmark, Check, ChevronRight, CircleDot, Clock3, Compass, Heart,
   Home, Pause, Play, RotateCcw, Search, Settings2, Sparkles, Star, Trophy,
-  Users, Volume2, VolumeX, X, Zap
+  Users, Volume2, VolumeX, X, Zap, Smile, Luggage, Car
 } from 'lucide-react';
 import { activities, filters } from './activities';
+import SmileyMergeGame from './games/SmileyMergeGame';
+import PackTheTrunkGame from './games/PackTheTrunkGame';
+import TrafficJamGame from './games/TrafficJamGame';
 import './styles.css';
 
 const DEFAULT_PLAYERS = ['Passenger 1', 'Passenger 2'];
@@ -255,6 +258,10 @@ function PlayScreen({ activity, players, activePlayer, setActivePlayer, round, s
             ? round.phase === 'success'
             : activity.gameType === 'ticTacToe'
               ? Boolean(round.winner || round.draw)
+            : activity.gameType === 'smileyMerge'
+              ? round.count > 0
+            : activity.gameType === 'packTrunk' || activity.gameType === 'trafficJam'
+              ? round.count >= 1
         : activity.gameType === 'timer'
           ? round.started
           : round.step >= activity.turns);
@@ -301,6 +308,9 @@ function RoundWidget({ activity, players, activePlayer, setActivePlayer, round, 
   if (activity.gameType === 'memory') return <MemoryMatchGame round={round} updateRound={updateRound} feedback={feedback} />;
   if (activity.gameType === 'reaction') return <ReactionGame round={round} updateRound={updateRound} feedback={feedback} />;
   if (activity.gameType === 'ticTacToe') return <TicTacToeGame players={players} activePlayer={activePlayer} setActivePlayer={setActivePlayer} round={round} updateRound={updateRound} feedback={feedback} />;
+  if (activity.gameType === 'smileyMerge') return <SmileyMergeGame round={round} updateRound={updateRound} feedback={feedback} />;
+  if (activity.gameType === 'packTrunk') return <PackTheTrunkGame round={round} updateRound={updateRound} feedback={feedback} />;
+  if (activity.gameType === 'trafficJam') return <TrafficJamGame round={round} updateRound={updateRound} feedback={feedback} />;
 
   return <div className="round-widget sequence-widget"><div className="progress-label"><b>{Math.min(round.step, activity.turns)}/{activity.turns} turns</b><span>Pass the phone</span></div><div className="turn-label"><span className="player-dot">{activePlayer + 1}</span><b>{players[activePlayer]}, you’re up!</b></div><p>{activity.turnLabel}</p><button className="sequence-action" disabled={round.step >= activity.turns} onClick={handleSequence}><Check size={20} /> Done — pass it on</button></div>;
 }
@@ -380,7 +390,7 @@ function MiniCard({ activity, number, onClick }) {
 }
 
 function labelFor(gameType) {
-  return { scavenger: 'Tap & find', vote: 'Pass & vote', timer: 'Beat the clock', rapid: 'Quick fire', tap: 'Tap challenge', memory: 'Match pairs', reaction: 'Reaction test', ticTacToe: 'Two-player board', sequence: 'Pass & play' }[gameType] || 'Play';
+  return { scavenger: 'Tap & find', vote: 'Pass & vote', timer: 'Beat the clock', rapid: 'Quick fire', tap: 'Tap challenge', memory: 'Match pairs', reaction: 'Reaction test', ticTacToe: 'Two-player board', sequence: 'Pass & play', smileyMerge: 'Smiley merge', packTrunk: 'Trunk puzzle', trafficJam: 'Traffic slide' }[gameType] || 'Play';
 }
 
 function formatTime(seconds) {
