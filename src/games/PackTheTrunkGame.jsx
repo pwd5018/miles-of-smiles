@@ -69,10 +69,7 @@ export default function PackTheTrunkGame({ round, updateRound, feedback }) {
       y: null, // grid row
       w: item.w,
       h: item.h,
-      rotated: false,
-      // Tray default offsets for smooth return transition
-      trayX: 0,
-      trayY: 0
+      rotated: false
     }));
     setItems(initialized);
     setIsWon(false);
@@ -123,13 +120,13 @@ export default function PackTheTrunkGame({ round, updateRound, feedback }) {
   const handlePointerDown = (e, item) => {
     if (isWon) return;
     e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clientX = e.clientX;
     const clientY = e.clientY;
 
     setDraggingId(item.id);
-    // Remember grab offset relative to item top-left
     setDragOffset({
       x: clientX - rect.left,
       y: clientY - rect.top
@@ -138,89 +135,65 @@ export default function PackTheTrunkGame({ round, updateRound, feedback }) {
       x: clientX,
       y: clientY
     });
-
-    // Remove from grid temporarily when picked up
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, x: null, y: null } : i));
   };
 
-  useEffect(() => {
-    const handlePointerMove = (e) => {
-      if (!draggingId) return;
-      const clientX = e.clientX;
-      const clientY = e.clientY;
-      setDragPos({ x: clientX, y: clientY });
-    };
+  const handlePointerMove = (e, item) => {
+    if (draggingId !== item.id) return;
+    e.preventDefault();
+    setDragPos({ x: e.clientX, y: e.clientY });
+  };
 
-    const handlePointerUp = (e) => {
-      if (!draggingId) return;
+  const handlePointerUp = (e, item) => {
+    if (draggingId !== item.id) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setDraggingId(null);
 
-      const board = boardRef.current;
-      if (!board) {
-        setDraggingId(null);
-        return;
-      }
+    const board = boardRef.current;
+    if (!board) return;
 
-      const boardRect = board.getBoundingClientRect();
-      const clientX = dragPos.x;
-      const clientY = dragPos.y;
+    const boardRect = board.getBoundingClientRect();
+    const itemLeft = e.clientX - dragOffset.x;
+    const itemTop = e.clientY - dragOffset.y;
 
-      // Item top-left position on screen
-      const itemLeft = clientX - dragOffset.x;
-      const itemTop = clientY - dragOffset.y;
+    // Calculate grid coordinate
+    const gridX = Math.round((itemLeft - boardRect.left) / CELL_SIZE);
+    const gridY = Math.round((itemTop - boardRect.top) / CELL_SIZE);
 
-      // Calculate grid coordinate
-      const gridX = Math.round((itemLeft - boardRect.left) / CELL_SIZE);
-      const gridY = Math.round((itemTop - boardRect.top) / CELL_SIZE);
+    const w = item.w;
+    const h = item.h;
 
-      const targetItem = items.find(i => i.id === draggingId);
-      const w = targetItem.w;
-      const h = targetItem.h;
+    // Validate bounds
+    const inBounds = gridX >= 0 && gridX + w <= currentLevel.cols && gridY >= 0 && gridY + h <= currentLevel.rows;
 
-      // Validate bounds
-      const inBounds = gridX >= 0 && gridX + w <= currentLevel.cols && gridY >= 0 && gridY + h <= currentLevel.rows;
+    // Validate overlap with other placed items
+    const overlaps = items.some(other => {
+      if (other.id === item.id || other.x === null) return false;
+      return (
+        gridX < other.x + other.w &&
+        gridX + w > other.x &&
+        gridY < other.y + other.h &&
+        gridY + h > other.y
+      );
+    });
 
-      // Validate overlap with other placed items
-      const overlaps = items.some(other => {
-        if (other.id === draggingId || other.x === null) return false;
-        return (
-          gridX < other.x + other.w &&
-          gridX + w > other.x &&
-          gridY < other.y + other.h &&
-          gridY + h > other.y
-        );
+    setItems(prevItems => {
+      const nextItems = prevItems.map(i => {
+        if (i.id !== item.id) return i;
+
+        if (inBounds && !overlaps) {
+          feedback('tap');
+          return { ...i, x: gridX, y: gridY };
+        } else {
+          // Failed placement - snap back to tray
+          feedback('tap');
+          return { ...i, x: null, y: null };
+        }
       });
 
-      setItems(prevItems => {
-        const nextItems = prevItems.map(item => {
-          if (item.id !== draggingId) return item;
-
-          if (inBounds && !overlaps) {
-            feedback('tap');
-            return { ...item, x: gridX, y: gridY };
-          } else {
-            // Failed placement - snap back to tray
-            feedback('tap');
-            return { ...item, x: null, y: null };
-          }
-        });
-
-        checkWinCondition(nextItems);
-        return nextItems;
-      });
-
-      setDraggingId(null);
-    };
-
-    if (draggingId) {
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    }
-
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [draggingId, dragOffset, dragPos, items, currentLevel, feedback]);
+      checkWinCondition(nextItems);
+      return nextItems;
+    });
+  };
 
   const checkWinCondition = (currentItems) => {
     const allPlaced = currentItems.every(item => item.x !== null);
@@ -234,9 +207,6 @@ export default function PackTheTrunkGame({ round, updateRound, feedback }) {
   const nextLevel = () => {
     setLevelIndex(prev => (prev + 1) % LEVELS.length);
   };
-
-  // Get active dragging item details for absolute positioning
-  const activeItem = items.find(i => i.id === draggingId);
 
   return (
     <div className="round-widget pack-trunk-widget">
@@ -264,33 +234,65 @@ export default function PackTheTrunkGame({ round, updateRound, feedback }) {
 
           {/* Placed Items */}
           {items.map(item => {
-            if (item.x === null || item.id === draggingId) return null;
+            if (item.x === null) return null;
             const Icon = ICONS[item.icon];
+            const isDragging = item.id === draggingId;
+
             return (
-              <div
-                key={item.id}
-                className={`trunk-item ${item.color} placed`}
-                style={{
-                  left: `${item.x * CELL_SIZE}px`,
-                  top: `${item.y * CELL_SIZE}px`,
-                  width: `${item.w * CELL_SIZE}px`,
-                  height: `${item.h * CELL_SIZE}px`
-                }}
-                onPointerDown={(e) => handlePointerDown(e, item)}
-              >
-                <div className="item-inner">
-                  {Icon && <Icon size={18} className="item-icon" />}
-                  <span className="item-label">{item.name}</span>
-                </div>
-                <button
-                  className="rotate-btn"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => rotateItem(item.id)}
-                  aria-label="Rotate"
+              <React.Fragment key={item.id}>
+                {/* Dotted ghost behind dragging element */}
+                {isDragging && (
+                  <div
+                    className="trunk-item-ghost"
+                    style={{
+                      position: 'absolute',
+                      left: `${item.x * CELL_SIZE}px`,
+                      top: `${item.y * CELL_SIZE}px`,
+                      width: `${item.w * CELL_SIZE}px`,
+                      height: `${item.h * CELL_SIZE}px`,
+                      border: '2.5px dashed rgba(32,50,51,0.2)',
+                      borderRadius: '10px',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                )}
+
+                {/* The actual suitcase item */}
+                <div
+                  className={`trunk-item ${item.color} placed ${isDragging ? 'dragging' : ''}`}
+                  style={isDragging ? {
+                    position: 'fixed',
+                    left: `${dragPos.x - dragOffset.x}px`,
+                    top: `${dragPos.y - dragOffset.y}px`,
+                    width: `${item.w * CELL_SIZE}px`,
+                    height: `${item.h * CELL_SIZE}px`,
+                    zIndex: 999
+                  } : {
+                    left: `${item.x * CELL_SIZE}px`,
+                    top: `${item.y * CELL_SIZE}px`,
+                    width: `${item.w * CELL_SIZE}px`,
+                    height: `${item.h * CELL_SIZE}px`
+                  }}
+                  onPointerDown={(e) => handlePointerDown(e, item)}
+                  onPointerMove={(e) => handlePointerMove(e, item)}
+                  onPointerUp={(e) => handlePointerUp(e, item)}
                 >
-                  <RotateCw size={12} />
-                </button>
-              </div>
+                  <div className="item-inner">
+                    {Icon && <Icon size={18} className="item-icon" />}
+                    <span className="item-label">{item.name}</span>
+                  </div>
+                  {!isDragging && (
+                    <button
+                      className="rotate-btn"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => rotateItem(item.id)}
+                      aria-label="Rotate"
+                    >
+                      <RotateCw size={12} />
+                    </button>
+                  )}
+                </div>
+              </React.Fragment>
             );
           })}
         </div>
@@ -300,57 +302,63 @@ export default function PackTheTrunkGame({ round, updateRound, feedback }) {
           <p className="shelf-hint">Drag into trunk. Tap item to rotate.</p>
           <div className="shelf-items">
             {items.map(item => {
-              if (item.x !== null || item.id === draggingId) return null;
+              if (item.x !== null) return null;
               const Icon = ICONS[item.icon];
+              const isDragging = item.id === draggingId;
+
               return (
-                <div
-                  key={item.id}
-                  className={`trunk-item ${item.color} shelf`}
-                  style={{
-                    width: `${item.w * CELL_SIZE}px`,
-                    height: `${item.h * CELL_SIZE}px`
-                  }}
-                  onPointerDown={(e) => handlePointerDown(e, item)}
-                >
-                  <div className="item-inner">
-                    {Icon && <Icon size={18} className="item-icon" />}
-                    <span className="item-label">{item.name}</span>
-                  </div>
-                  <button
-                    className="rotate-btn"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={() => rotateItem(item.id)}
-                    aria-label="Rotate"
+                <React.Fragment key={item.id}>
+                  {/* Shelf item, absolute-fixed when dragged, normal relative flow on shelf */}
+                  <div
+                    className={`trunk-item ${item.color} shelf ${isDragging ? 'dragging' : ''}`}
+                    style={isDragging ? {
+                      position: 'fixed',
+                      left: `${dragPos.x - dragOffset.x}px`,
+                      top: `${dragPos.y - dragOffset.y}px`,
+                      width: `${item.w * CELL_SIZE}px`,
+                      height: `${item.h * CELL_SIZE}px`,
+                      zIndex: 999
+                    } : {
+                      width: `${item.w * CELL_SIZE}px`,
+                      height: `${item.h * CELL_SIZE}px`
+                    }}
+                    onPointerDown={(e) => handlePointerDown(e, item)}
+                    onPointerMove={(e) => handlePointerMove(e, item)}
+                    onPointerUp={(e) => handlePointerUp(e, item)}
                   >
-                    <RotateCw size={12} />
-                  </button>
-                </div>
+                    <div className="item-inner">
+                      {Icon && <Icon size={18} className="item-icon" />}
+                      <span className="item-label">{item.name}</span>
+                    </div>
+                    {!isDragging && (
+                      <button
+                        className="rotate-btn"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => rotateItem(item.id)}
+                        aria-label="Rotate"
+                      >
+                        <RotateCw size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Placeholder box in flex layout during drag to keep other cards from shifting */}
+                  {isDragging && (
+                    <div
+                      style={{
+                        width: `${item.w * CELL_SIZE}px`,
+                        height: `${item.h * CELL_SIZE}px`,
+                        border: '2.5px dashed rgba(32,50,51,0.15)',
+                        borderRadius: '10px'
+                      }}
+                    />
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
         </div>
       </div>
-
-      {/* Floating Drag Overlay */}
-      {draggingId && activeItem && (
-        <div
-          className={`trunk-item ${activeItem.color} dragging`}
-          style={{
-            position: 'fixed',
-            left: `${dragPos.x - dragOffset.x}px`,
-            top: `${dragPos.y - dragOffset.y}px`,
-            width: `${activeItem.w * CELL_SIZE}px`,
-            height: `${activeItem.h * CELL_SIZE}px`,
-            pointerEvents: 'none',
-            zIndex: 999
-          }}
-        >
-          <div className="item-inner">
-            {ICONS[activeItem.icon] && React.createElement(ICONS[activeItem.icon], { size: 18, className: 'item-icon' })}
-            <span className="item-label">{activeItem.name}</span>
-          </div>
-        </div>
-      )}
 
       {isWon && (
         <div className="trunk-overlay win">

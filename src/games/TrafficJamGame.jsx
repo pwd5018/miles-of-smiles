@@ -137,105 +137,80 @@ export default function TrafficJamGame({ round, updateRound, feedback }) {
   const handlePointerDown = (e, vehicle) => {
     if (isWon) return;
     e.preventDefault();
-
-    const clientX = e.clientX;
-    const clientY = e.clientY;
+    e.currentTarget.setPointerCapture(e.pointerId);
 
     setDraggingId(vehicle.id);
-    dragStartPos.current = { x: clientX, y: clientY };
-    dragStartVal.current = vehicle.orientation === 'h' ? vehicle.col : vehicle.row;
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+
+    // Get current position from state
+    const currentVeh = vehicles.find(v => v.id === vehicle.id);
+    dragStartVal.current = currentVeh.orientation === 'h' ? currentVeh.col : currentVeh.row;
   };
 
-  useEffect(() => {
-    const handlePointerMove = (e) => {
-      if (!draggingId) return;
-      const clientX = e.clientX;
-      const clientY = e.clientY;
+  const handlePointerMove = (e, vehicle) => {
+    if (draggingId !== vehicle.id) return;
+    e.preventDefault();
 
-      const vehicle = vehicles.find(v => v.id === draggingId);
-      if (!vehicle) return;
+    const deltaX = e.clientX - dragStartPos.current.x;
+    const deltaY = e.clientY - dragStartPos.current.y;
 
-      const deltaX = clientX - dragStartPos.current.x;
-      const deltaY = clientY - dragStartPos.current.y;
+    const occupancy = getOccupancyGrid(vehicle.id);
+    const { minVal, maxVal } = getLimits(vehicle, occupancy);
 
-      const occupancy = getOccupancyGrid(draggingId);
-      const { minVal, maxVal } = getLimits(vehicle, occupancy);
+    setVehicles(prev => prev.map(v => {
+      if (v.id !== vehicle.id) return v;
 
-      setVehicles(prev => prev.map(v => {
-        if (v.id !== draggingId) return v;
-
-        if (v.orientation === 'h') {
-          // Slide along X
-          const cellDelta = deltaX / cellPixSize;
-          let targetCol = dragStartVal.current + cellDelta;
-
-          // Special exception: Target car escaping the exit (right edge)
-          const limitRight = v.isTarget ? 6 : maxVal;
-
-          targetCol = Math.max(minVal, Math.min(limitRight, targetCol));
-          return { ...v, col: targetCol };
-        } else {
-          // Slide along Y
-          const cellDelta = deltaY / cellPixSize;
-          let targetRow = dragStartVal.current + cellDelta;
-          targetRow = Math.max(minVal, Math.min(maxVal, targetRow));
-          return { ...v, row: targetRow };
-        }
-      }));
-    };
-
-    const handlePointerUp = () => {
-      if (!draggingId) return;
-
-      const target = vehicles.find(v => v.id === draggingId);
-      if (!target) {
-        setDraggingId(null);
-        return;
+      if (v.orientation === 'h') {
+        const cellDelta = deltaX / cellPixSize;
+        let targetCol = dragStartVal.current + cellDelta;
+        const limitRight = v.isTarget ? 6 : maxVal;
+        targetCol = Math.max(minVal, Math.min(limitRight, targetCol));
+        return { ...v, col: targetCol };
+      } else {
+        const cellDelta = deltaY / cellPixSize;
+        let targetRow = dragStartVal.current + cellDelta;
+        targetRow = Math.max(minVal, Math.min(maxVal, targetRow));
+        return { ...v, row: targetRow };
       }
+    }));
+  };
 
-      // Snap coordinates to integers
-      const finalCol = Math.round(target.col);
-      const finalRow = Math.round(target.row);
+  const handlePointerUp = (e, vehicle) => {
+    if (draggingId !== vehicle.id) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setDraggingId(null);
 
-      const moved = target.orientation === 'h'
+    setVehicles(prev => {
+      const latestVehicle = prev.find(v => v.id === vehicle.id);
+      if (!latestVehicle) return prev;
+
+      const finalCol = Math.round(latestVehicle.col);
+      const finalRow = Math.round(latestVehicle.row);
+
+      const moved = latestVehicle.orientation === 'h'
         ? finalCol !== dragStartVal.current
         : finalRow !== dragStartVal.current;
 
-      setVehicles(prev => prev.map(v => {
-        if (v.id !== draggingId) return v;
-        return {
-          ...v,
-          col: finalCol,
-          row: finalRow
-        };
-      }));
+      const nextVehicles = prev.map(v => {
+        if (v.id !== vehicle.id) return v;
+        return { ...v, col: finalCol, row: finalRow };
+      });
 
       if (moved) {
-        setMoves(prev => prev + 1);
+        setMoves(m => m + 1);
         feedback('tap');
       }
 
       // Check win condition
-      const checkTarget = vehicles.find(v => v.id === draggingId);
-      if (checkTarget && checkTarget.isTarget && finalCol + checkTarget.size >= 6) {
+      if (latestVehicle.isTarget && finalCol + latestVehicle.size >= 6) {
         setIsWon(true);
         updateRound({ count: 1 });
         feedback('success');
       }
 
-      setDraggingId(null);
-    };
-
-    if (draggingId) {
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    }
-
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [draggingId, vehicles, feedback, updateRound]);
+      return nextVehicles;
+    });
+  };
 
   const handleNextLevel = () => {
     setLevelIndex(prev => (prev + 1) % VEHICLE_LEVELS.length);
@@ -280,6 +255,8 @@ export default function TrafficJamGame({ round, updateRound, feedback }) {
                   height: `${(!isHoriz ? v.size * cellPixSize : cellPixSize) - 4}px`
                 }}
                 onPointerDown={(e) => handlePointerDown(e, v)}
+                onPointerMove={(e) => handlePointerMove(e, v)}
+                onPointerUp={(e) => handlePointerUp(e, v)}
               >
                 <div className="vehicle-body">
                   <Car size={16} className="car-icon" />
